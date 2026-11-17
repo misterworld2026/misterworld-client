@@ -73,9 +73,19 @@ export default function MainPage() {
 
       <section
         id="top"
-        style={{ background: color.navyDeep, color: '#ffffff', minHeight: 620, boxSizing: 'border-box', padding: '64px 24px', display: 'flex', flexDirection: 'column' }}
+        style={{ position: 'relative', overflow: 'hidden', background: color.navyDeep, color: '#ffffff', minHeight: 620, boxSizing: 'border-box', padding: '64px 24px', display: 'flex', flexDirection: 'column' }}
       >
-        <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', gap: 24, maxWidth: 1200, margin: '0 auto' }}>
+        <video
+          src="/AdobeStock_492787860.mp4"
+          autoPlay
+          loop
+          muted
+          playsInline
+          preload="auto"
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+        />
+        <div style={{ position: 'absolute', inset: 0, background: 'rgba(0, 0, 0, 0.5)' }} />
+        <div style={{ position: 'relative', flexGrow: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', gap: 24, maxWidth: 1200, margin: '0 auto' }}>
           <h1 style={{ margin: 0, fontSize: 'clamp(16px, 3.6vw, 52px)', lineHeight: 1.3, fontWeight: 700, whiteSpace: 'nowrap' }}>당신을 위한 휴식, 우리가 만듭니다.</h1>
           <p style={{ margin: 0, fontSize: 17, lineHeight: '26px', maxWidth: 640 }}>
             계획도, 준비도 필요 없습니다. 설렘만 가져오세요.
