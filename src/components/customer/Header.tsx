@@ -111,7 +111,6 @@ export default function CustomerHeader({ current }: { current?: 'login' | 'theme
       </LogoBlock>
       <Nav aria-label="주 메뉴">
         <Link to="/themes" aria-current={current === 'themes' ? 'page' : undefined}>여행 테마</Link>
-        <Link to="/#reviews">후기</Link>
       </Nav>
       {authed ? (
         <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
