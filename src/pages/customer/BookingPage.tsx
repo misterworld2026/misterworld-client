@@ -21,7 +21,6 @@ import { capacityOf, carOf, classicBlocked, deadlineOf, needOf, needTextOf, toda
 import { dateTimeKst, md } from '@/domain/format';
 import { color } from '@/styles/tokens';
 import CustomerHeader from '@/components/customer/Header';
-import VoiceWidget from '@/components/customer/VoiceWidget';
 
 // ---------------------------------------------------------------- 상수·도우미
 
@@ -364,18 +363,6 @@ export default function BookingPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [productList, location.state]);
 
-  const voiceContext: VoiceSelection = {
-    productId,
-    scheduleId: schedule?.travelScheduleId ?? null,
-    grade,
-    optionIds: {
-      HOTEL: hotelId,
-      TRANSPORT: null,
-      MEAL: mealId,
-      EXTRA: extras,
-    },
-  };
-
   // ---- 견적 → 신청 → 결제 ----
   const buildRequest = (key: string, token?: string): TravelApplicationRequest | null => {
     if (!product || !schedule || !grade || !me) return null;
@@ -522,7 +509,7 @@ export default function BookingPage() {
       : `현재 신청 인원은 ${newCount}명입니다. 출발이 확정되면 문자로 알려드립니다.`;
 
   const rule = isHM
-    ? `${product?.name ?? '허니문 낭만 투어'}는 2인 전용이며, 한 일정에 최대 4명(2팀)까지 신청할 수 있습니다. 신청 인원이 4명(2팀) 이상이면 출발이 확정됩니다.`
+    ? `${product?.name ?? '허니문'}는 2인 전용이며, 한 일정에 최대 4명(2팀)까지 신청할 수 있습니다. 신청 인원이 4명(2팀) 이상이면 출발이 확정됩니다.`
     : '신청 인원이 3명 이상이면 출발이 확정되고 문자로 알려드립니다. 신청은 출발 7일 전까지 가능합니다.';
 
   // ---- 달력 칸 ----
@@ -1009,9 +996,6 @@ export default function BookingPage() {
 
       {step <= 5 && (
         <div style={{ position: 'sticky', bottom: 0, zIndex: 10, background: color.surfaceDark, color: '#ffffff', padding: '16px 24px', flexShrink: 0 }}>
-          <div style={{ position: 'absolute', right: 24, bottom: 'calc(100% + 24px)' }}>
-            <VoiceWidget context={voiceContext} onApply={applySelection} />
-          </div>
           <div style={{ maxWidth: 1392, margin: '0 auto', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '16px 32px' }}>
             <dl style={{ margin: 0, flex: '0 1 auto', maxWidth: '100%', overflowX: 'auto', display: 'grid', gridTemplateColumns: '150px 160px 60px 410px 48px 112px', gap: '8px 24px' }}>
               {summary.map((m) => (
