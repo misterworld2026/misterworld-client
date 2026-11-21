@@ -9,6 +9,7 @@ import { THEME_CONTENT, REVIEWS } from '@/domain/themes';
 import { themeStartPrice } from '@/domain/pricing';
 import { color } from '@/styles/tokens';
 import CustomerHeader from '@/components/customer/Header';
+import TravelHistoryPopup from '@/components/customer/TravelHistoryPopup';
 import CustomerFooter from '@/components/customer/Footer';
 import FloatingVoice from '@/components/customer/FloatingVoice';
 
@@ -70,6 +71,7 @@ export default function MainPage() {
   return (
     <div style={{ background: '#ffffff', color: '#000000' }}>
       <CustomerHeader current="home" />
+      <TravelHistoryPopup />
 
       <section
         id="top"
