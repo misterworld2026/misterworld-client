@@ -36,19 +36,20 @@ export const PanelTitle = styled.h2`
   }
 `;
 
-/** 금색 주요 버튼 (.sc-pri) */
+/** 노란색 주요 버튼 (.sc-pri) — 콘솔 선택 강조색(consoleSelected)과 통일 */
 export const PrimaryBtn = styled.button`
   height: 32px;
   box-sizing: border-box;
-  border: 1px solid ${color.brandGold};
-  background: ${color.brandGold};
+  border: 1px solid ${color.consoleSelected};
+  background: ${color.consoleSelected};
   color: #000000;
   padding: 0 16px;
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
   &:hover:not(:disabled) {
-    background: #c49d4f;
+    background: #ffe04d;
+    border-color: #ffe04d;
   }
   &:disabled {
     opacity: 0.4;

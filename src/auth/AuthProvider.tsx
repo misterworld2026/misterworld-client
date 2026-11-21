@@ -10,6 +10,9 @@ interface AuthState {
   role: Role | null;
   login: (email: string, password: string) => Promise<Role>;
   logout: () => Promise<void>;
+  /** 고객(MEMBER)이 방금 로그인했으면 true — 여행 이력 팝업 표시용. 세션 복구 시에는 false */
+  historyPopupPending: boolean;
+  dismissHistoryPopup: () => void;
 }
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -17,6 +20,7 @@ const AuthContext = createContext<AuthState | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<AuthState['status']>('loading');
   const [role, setRole] = useState<Role | null>(null);
+  const [historyPopupPending, setHistoryPopupPending] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -33,6 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const off = onSessionExpired(() => {
       setRole(null);
       setStatus('anonymous');
+      setHistoryPopupPending(false);
     });
     return () => {
       mounted = false;
@@ -44,6 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const data = await apiLogin({ email, password });
     setRole(data.role);
     setStatus('authed');
+    setHistoryPopupPending(data.role === 'MEMBER');
     return data.role;
   }, []);
 
@@ -51,9 +57,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await apiLogout();
     setRole(null);
     setStatus('anonymous');
+    setHistoryPopupPending(false);
   }, []);
 
-  const value = useMemo(() => ({ status, role, login, logout }), [status, role, login, logout]);
+  const dismissHistoryPopup = useCallback(() => setHistoryPopupPending(false), []);
+
+  const value = useMemo(
+    () => ({ status, role, login, logout, historyPopupPending, dismissHistoryPopup }),
+    [status, role, login, logout, historyPopupPending, dismissHistoryPopup],
+  );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

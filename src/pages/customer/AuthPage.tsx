@@ -1,7 +1,7 @@
 // 로그인 · 회원가입 — 디자인 캔버스 Auth.dc.html을 실제 API로 구현.
 // 로그인: POST /api/auth/login, 가입: POST /api/auth/signup
 import { useState } from 'react';
-import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { ApiError } from '@/api/client';
 import { signup } from '@/api/auth';
@@ -68,14 +68,13 @@ const emailOk = (v: string) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v);
 export default function AuthPage() {
   const auth = useAuth();
   const navigate = useNavigate();
-  const location = useLocation() as { state?: { from?: string } };
   const [tab, setTab] = useState<'login' | 'signup'>('login');
   const [message, setMessage] = useState('');
   const [isOk, setIsOk] = useState(false);
   const [busy, setBusy] = useState(false);
 
   if (auth.status === 'authed') {
-    return <Navigate to={auth.role === 'STAFF' ? '/staff/products' : (location.state?.from ?? '/')} replace />;
+    return <Navigate to={auth.role === 'STAFF' ? '/staff/products' : '/'} replace />;
   }
 
   const fail = (text: string) => {
@@ -99,7 +98,7 @@ export default function AuthPage() {
     setBusy(true);
     try {
       const role = await auth.login(f.email, f.password);
-      navigate(role === 'STAFF' ? '/staff/products' : (location.state?.from ?? '/'), { replace: true });
+      navigate(role === 'STAFF' ? '/staff/products' : '/', { replace: true });
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) fail('이메일 또는 비밀번호가 올바르지 않습니다.');
       else fail(err instanceof ApiError ? err.message : '로그인하지 못했습니다. 잠시 후 다시 시도해 주세요.');
