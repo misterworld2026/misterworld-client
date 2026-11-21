@@ -7,10 +7,10 @@ export const THEMES = ['허니문', '효도', '골프', '트레킹'] as const;
 export type Theme = (typeof THEMES)[number];
 
 export const THEME_DISPLAY: Record<Theme, string> = {
-  허니문: '허니문 낭만 투어',
-  효도: '효도 힐링 투어',
-  골프: '골프 챌린지 투어',
-  트레킹: '아웃도어 트레킹 투어',
+  허니문: '허니문',
+  효도: '효도',
+  골프: '골프',
+  트레킹: '트레킹',
 };
 
 export function capacityOf(theme: string): number {
