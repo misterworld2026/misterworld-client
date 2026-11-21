@@ -154,7 +154,12 @@ export default function MyPage() {
                     <Line label="결제" value={a.paymentStatus === 'PAID' ? `완료 · ${dateTimeKst(a.paidAt).slice(0, 10)}` : off ? '-' : '미결제'} />
                     <Line label="신청일" value={dateTimeKst(a.appliedAt).slice(0, 10)} />
                   </dl>
-                  <p style={{ margin: 0, fontSize: 14, lineHeight: '20px' }}>옵션 · {v.options}{a.discountRate ? ` · 단골 할인 ${a.discountRate}% 적용` : ''}</p>
+                  <p style={{ margin: 0, fontSize: 14, lineHeight: '20px' }}>
+                    옵션
+                    <span aria-hidden="true" style={{ display: 'inline-block', width: 1, height: 12, margin: '0 8px', background: '#000000', opacity: 0.4, verticalAlign: '-1px' }} />
+                    {v.options}
+                    {a.discountRate ? ` · 단골 할인 ${a.discountRate}% 적용` : ''}
+                  </p>
                   {(v.unpaid || v.cancellable) && (
                     <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
                       {v.unpaid && (
@@ -180,7 +185,10 @@ export default function MyPage() {
                         ))}
                       {v.cancellable && v.s && (
                         <span style={{ fontSize: 14, lineHeight: '20px' }}>
-                          출발 확정 전까지 취소할 수 있습니다{today <= deadlineOf(v.s.departureDate) ? ` · 신청 마감 ${ymd(deadlineOf(v.s.departureDate))}` : ''}
+                          출발 확정 전까지 취소할 수 있습니다
+                          {today <= deadlineOf(v.s.departureDate) && (
+                            <span style={{ color: color.muted, marginLeft: 12 }}>신청 마감 {ymd(deadlineOf(v.s.departureDate))}</span>
+                          )}
                         </span>
                       )}
                     </div>

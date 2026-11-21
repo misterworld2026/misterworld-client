@@ -80,6 +80,38 @@ const OptBtn = styled.button<{ $on: boolean; $off?: boolean }>`
   cursor: pointer;
 `;
 
+// 동그라미 −/+ 수량 버튼
+const RoundBtn = styled.button`
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border: 1px solid #000000;
+  border-radius: 50%;
+  background: #ffffff;
+  color: #000000;
+  font-size: 18px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  &:disabled {
+    opacity: 0.3;
+    cursor: default;
+  }
+`;
+
+function Stepper({ value, min, max, unit, label, onChange, disabled }: { value: number; min: number; max: number; unit: string; label: string; onChange: (n: number) => void; disabled?: boolean }) {
+  return (
+    <span style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <RoundBtn type="button" onClick={() => onChange(value - 1)} disabled={disabled || value <= min} aria-label={`${label} 1${unit} 줄이기`}>−</RoundBtn>
+      <span aria-live="polite" style={{ minWidth: 40, textAlign: 'center', fontSize: 17, fontWeight: 700 }}>{value}{unit}</span>
+      <RoundBtn type="button" onClick={() => onChange(value + 1)} disabled={disabled || value >= max} aria-label={`${label} 1${unit} 늘리기`}>+</RoundBtn>
+    </span>
+  );
+}
+
 const TextInput = styled.input`
   height: 48px;
   box-sizing: border-box;
@@ -167,6 +199,13 @@ export default function BookingPage() {
   const [hotelId, setHotelId] = useState<number | null>(null);
   const [mealId, setMealId] = useState<number | null>(null);
   const [extras, setExtras] = useState<number[]>([]);
+  // 추가 옵션 수량 (화면 전용 — 서버 API는 아직 수량을 받지 않아 optionIds에는 1개만 보낸다)
+  const [extraQty, setExtraQty] = useState<Record<number, number>>({});
+  const qtyOf = (id: number) => (extras.includes(id) ? (extraQty[id] ?? 1) : 0);
+  const setQty = (id: number, n: number) => {
+    setExtraQty((prev) => ({ ...prev, [id]: n }));
+    setExtras((prev) => (n > 0 ? (prev.includes(id) ? prev : [...prev, id]) : prev.filter((x) => x !== id)));
+  };
   const [people, setPeople] = useState(1);
   const [travelers, setTravelers] = useState<Traveler[]>([emptyTraveler()]);
   const [step, setStep] = useState(1);
@@ -717,12 +756,7 @@ export default function BookingPage() {
           {/* ---------------- 3. 옵션 변경 ---------------- */}
           {step === 3 && product && config && grade && (
             <section aria-labelledby="step3-title" style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <H1 id="step3-title">옵션 변경</H1>
-                <p style={{ margin: 0, fontSize: 17, lineHeight: '26px' }}>
-                  {GRADE_LABEL[grade]} 등급의 기본 구성에서 시작합니다. 호텔과 식사는 등급보다 높은 쪽으로만 바꿀 수 있습니다.
-                </p>
-              </div>
+              <H1 id="step3-title">옵션 변경</H1>
               <div style={{ display: 'flex', flexDirection: 'column', borderTop: '2px solid #000000' }}>
                 {(['HOTEL', 'MEAL'] as const).map((type) => {
                   const opts = optionsOf(type);
@@ -738,7 +772,10 @@ export default function BookingPage() {
                           {opts.map((o) => {
                             const ok = allowedIds.has(o.id);
                             const isDef = def?.id === o.id;
-                            const add = ok && !isDef && o.additionalPrice ? ` · +${o.additionalPrice.toLocaleString('ko-KR')}원` : '';
+                            const add =
+                              ok && !isDef && o.additionalPrice ? (
+                                <span style={{ color: color.danger }}> +{o.additionalPrice.toLocaleString('ko-KR')}원</span>
+                              ) : null;
                             return (
                               <OptBtn
                                 key={o.id}
@@ -779,12 +816,23 @@ export default function BookingPage() {
                     {optionsOf('EXTRA').length === 0 ? (
                       <p style={{ margin: 0, fontSize: 15, lineHeight: '22px' }}>이 상품에는 추가할 수 있는 옵션이 없습니다.</p>
                     ) : (
-                      <div role="group" aria-label="추가 옵션" style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                      <div role="group" aria-label="추가 옵션" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '12px 32px' }}>
                         {optionsOf('EXTRA').map((o) => {
                           const ok = allowedIds.has(o.id);
                           const on = extras.includes(o.id) && ok;
+                          const price = <span style={{ color: color.danger }}>+{o.additionalPrice.toLocaleString('ko-KR')}원</span>;
+                          if (o.benefitCode !== 'CHAMPAGNE') {
+                            return (
+                              <div key={o.id} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12, fontSize: 15, lineHeight: '22px', opacity: ok ? 1 : 0.4 }}>
+                                <span style={{ textDecoration: ok ? 'none' : 'line-through' }}>
+                                  {o.name} {price}<span style={{ fontSize: 12, opacity: 0.7 }}>/1인</span>
+                                </span>
+                                <Stepper value={ok ? qtyOf(o.id) : 0} min={0} max={10} unit="개" label={o.name} disabled={!ok} onChange={(n) => setQty(o.id, n)} />
+                              </div>
+                            );
+                          }
                           return (
-                            <OptBtn
+                            <OptBtn style={{ flex: '0 0 auto', width: 'fit-content' }}
                               key={o.id}
                               type="button"
                               disabled={!ok}
@@ -793,7 +841,7 @@ export default function BookingPage() {
                               aria-pressed={on}
                               onClick={() => ok && setExtras((prev) => (prev.includes(o.id) ? prev.filter((x) => x !== o.id) : [...prev, o.id]))}
                             >
-                              {o.name} · +{o.additionalPrice.toLocaleString('ko-KR')}원<span style={{ fontSize: 12, opacity: 0.7 }}>/1인</span>
+                              {o.name} {price}<span style={{ fontSize: 12, opacity: 0.7 }}>/1인</span>
                             </OptBtn>
                           );
                         })}
@@ -816,29 +864,29 @@ export default function BookingPage() {
                 <div style={{ flex: '999 1 560px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 32 }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                     <H2>신청 인원</H2>
-                    {isHM ? (
-                      <p style={{ margin: 0, fontSize: 17, lineHeight: '24px' }}>
-                        <span style={{ fontWeight: 700 }}>2명</span> · {product.name}는 2인 전용입니다.
-                      </p>
-                    ) : (
-                      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 16 }}>
-                        <span style={{ display: 'flex', alignItems: 'center', border: '1px solid #000000' }}>
-                          <button type="button" onClick={() => setPeople(Math.max(count - 1, 1))} disabled={count <= 1} aria-label="인원 1명 줄이기" style={{ width: 44, height: 44, border: 0, borderRadius: 0, background: '#ffffff', color: '#000000', fontSize: 20, cursor: 'pointer', opacity: count <= 1 ? 0.3 : 1 }}>−</button>
-                          <span aria-live="polite" style={{ minWidth: 56, textAlign: 'center', fontSize: 17, fontWeight: 700 }}>{count}명</span>
-                          <button type="button" onClick={() => setPeople(Math.min(count + 1, maxPeople))} disabled={count >= maxPeople} aria-label="인원 1명 늘리기" style={{ width: 44, height: 44, border: 0, borderRadius: 0, background: '#ffffff', color: '#000000', fontSize: 20, cursor: 'pointer', opacity: count >= maxPeople ? 0.3 : 1 }}>+</button>
-                        </span>
-                        <span style={{ fontSize: 15, lineHeight: '22px' }}>이 일정의 남은 자리 {remain}명</span>
-                      </div>
-                    )}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 16 }}>
+                      {/* 허니문은 서버 정책(honeymoon-size: ONE_TEAM)상 2명 고정 → 버튼 비활성 */}
+                      <Stepper value={count} min={isHM ? 2 : 1} max={isHM ? 2 : maxPeople} unit="명" label="인원" disabled={isHM} onChange={setPeople} />
+                      {!isHM && <span style={{ fontSize: 15, lineHeight: '22px' }}>이 일정의 남은 자리 {remain}명</span>}
+                    </div>
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                     <H2>여행객 정보</H2>
                     <div style={{ padding: 20, background: color.surfaceSoft, display: 'flex', flexDirection: 'column', gap: 12 }}>
                       <span style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                        <span style={{ fontSize: 15, lineHeight: '22px', fontWeight: 700 }}>여행객 1 · 본인</span>
-                        <span style={{ fontSize: 17, lineHeight: '24px' }}>{me ? `${me.name} · ${me.phoneNumber}` : '회원 정보를 불러오는 중입니다…'}</span>
-                        <span style={{ fontSize: 14, lineHeight: '20px' }}>가입 정보로 자동 입력되었습니다.</span>
+                        <span style={{ fontSize: 15, lineHeight: '22px', fontWeight: 700 }}>여행객1(본인)</span>
+                        <span style={{ fontSize: 17, lineHeight: '24px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                          {me ? (
+                            <>
+                              {me.name}
+                              <span aria-hidden="true" style={{ width: 1, height: 14, background: '#000000', opacity: 0.4 }} />
+                              {me.phoneNumber}
+                            </>
+                          ) : (
+                            '회원 정보를 불러오는 중입니다…'
+                          )}
+                        </span>
                       </span>
                       <span style={{ display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 280 }}>
                         <FieldLabel htmlFor="tv-birth-0">생년월일</FieldLabel>
@@ -984,7 +1032,7 @@ export default function BookingPage() {
                 ))}
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, paddingTop: 12, borderTop: '2px solid #000000', fontSize: 17, lineHeight: '24px', fontWeight: 700 }}>
                   <dt>결제 금액</dt>
-                  <dd style={{ margin: 0 }}>{wonSign(paid?.paidAmount ?? applied.application.totalPrice)} · World Pay</dd>
+                  <dd style={{ margin: 0 }}>{wonSign(paid?.paidAmount ?? applied.application.totalPrice)}</dd>
                 </div>
               </dl>
               <p style={{ margin: 0, maxWidth: 560, fontSize: 17, lineHeight: '26px' }}>{doneNotice}</p>

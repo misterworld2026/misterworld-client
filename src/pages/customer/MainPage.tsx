@@ -190,7 +190,7 @@ export default function MainPage() {
             <h2 style={{ margin: 0, fontSize: 32, lineHeight: '40px', fontWeight: 700 }}>고객 후기</h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16, opacity: fade ? 0 : 1, transform: `translateY(${fade ? 8 : 0}px)`, transition: 'opacity 0.45s ease, transform 0.45s ease' }}>
               <p style={{ margin: 0, fontSize: 17, lineHeight: '26px', minHeight: 104 }}>“{review.text}”</p>
-              <p style={{ margin: 0, fontSize: 15, lineHeight: '22px' }}>{review.by} · 예시 후기</p>
+              <p style={{ margin: 0, fontSize: 15, lineHeight: '22px' }}>{review.by}</p>
             </div>
             <div role="group" aria-label="후기 넘기기" style={{ display: 'flex', gap: 0, marginLeft: -16 }}>
               {REVIEWS.map((_, i) => (
