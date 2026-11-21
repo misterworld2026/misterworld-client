@@ -54,6 +54,12 @@ function fieldText(f: VoicePreviewField): { text: string; ok: boolean } | null {
   return { text: f.value ? `${f.value} (확인 필요)` : '확인 필요', ok: false };
 }
 
+// 버튼·패널 크기 (버튼을 키우면 펼친 패널도 같은 비율로 키운다)
+const BTN_W = 240;
+const BTN_H = 56;
+const PANEL_W = 560;
+const PANEL_MIN_H = 168;
+
 function MicIcon({ size = 20 }: { size?: number }) {
   return (
     <svg aria-hidden="true" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
@@ -146,7 +152,7 @@ export default function VoiceWidget({
   const [note, setNote] = useState('');
   const [bars, setBars] = useState<number[]>(flatBars);
   const [result, setResult] = useState<VoiceInterpretationResponse | null>(null);
-  const [panelH, setPanelH] = useState(144);
+  const [panelH, setPanelH] = useState(PANEL_MIN_H);
   const [dur, setDur] = useState('0.5s');
 
   const panelRef = useRef<HTMLDivElement>(null);
@@ -161,7 +167,7 @@ export default function VoiceWidget({
   useLayoutEffect(() => {
     if (!open || !panelRef.current) return;
     const el = panelRef.current;
-    const measure = () => setPanelH(Math.max(144, el.scrollHeight));
+    const measure = () => setPanelH(Math.max(PANEL_MIN_H, el.scrollHeight));
     measure();
     const ro = new ResizeObserver(measure);
     Array.from(el.children).forEach((c) => ro.observe(c));
@@ -373,13 +379,13 @@ export default function VoiceWidget({
     <div
       style={{
         position: 'relative',
-        width: open ? 480 : 200,
-        maxWidth: 'calc(100vw - 48px)',
-        height: open ? panelH : 48,
+        width: open ? PANEL_W : BTN_W,
+        maxWidth: 'calc(100vw - 96px)',
+        height: open ? panelH : BTN_H,
         boxSizing: 'border-box',
         background: open ? '#000000' : color.brandGold,
         color: '#ffffff',
-        borderRadius: 24,
+        borderRadius: BTN_H / 2,
         overflow: 'hidden',
         transition: `width ${dur} ease, height ${dur} ease, background-color ${dur} ease`,
       }}
@@ -390,11 +396,11 @@ export default function VoiceWidget({
         aria-expanded={open}
         style={{
           position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: 'none', color: '#ffffff', border: 0, padding: 0,
-          fontSize: 14, lineHeight: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: 'pointer',
+          fontSize: 16, lineHeight: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, cursor: 'pointer',
           opacity: open ? 0 : 1, visibility: open ? 'hidden' : 'visible', transition: 'opacity 0.2s ease, visibility 0.2s',
         }}
       >
-        <MicIcon />
+        <MicIcon size={22} />
         <span>음성으로 여행 선택</span>
       </button>
 
@@ -404,8 +410,8 @@ export default function VoiceWidget({
         aria-label="음성으로 여행 선택"
         aria-hidden={!open}
         style={{
-          position: 'absolute', top: 0, left: 0, width: 480, maxWidth: '100%', boxSizing: 'border-box', display: 'flex', flexDirection: 'column',
-          minHeight: 144, opacity: open ? 1 : 0, visibility: open ? 'visible' : 'hidden',
+          position: 'absolute', top: 0, left: 0, width: PANEL_W, maxWidth: '100%', boxSizing: 'border-box', display: 'flex', flexDirection: 'column',
+          minHeight: PANEL_MIN_H, opacity: open ? 1 : 0, visibility: open ? 'visible' : 'hidden',
           transition: `opacity 0.25s ease ${open ? '0.25s' : '0s'}, visibility 0.25s ${open ? '0.25s' : '0s'}`,
         }}
       >
@@ -420,7 +426,7 @@ export default function VoiceWidget({
           </svg>
         </button>
 
-        <div aria-live="polite" style={{ flex: '1 1 auto', boxSizing: 'border-box', minHeight: 86, padding: '22px 48px 18px 20px', fontSize: 15, lineHeight: '22px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 8 }}>
+        <div aria-live="polite" style={{ flex: '1 1 auto', boxSizing: 'border-box', minHeight: 100, padding: '26px 56px 20px 24px', fontSize: 16, lineHeight: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 8 }}>
           {showText && (
             <textarea
               aria-label="인식된 문장"
