@@ -257,7 +257,10 @@ export default function BookingPage() {
 
   // ---- 등급·옵션 ----
   const config = product?.allowedGrades.find((c) => c.grade === grade && c.configurationReady) ?? null;
-  const allowedIds = new Set((config?.allowedOptions ?? []).map((o) => o.id));
+  // 샴페인은 프리미엄 기본 포함 혜택 → 프리미엄에서는 추가 옵션으로 선택 불가
+  const allowedIds = new Set(
+    (config?.allowedOptions ?? []).filter((o) => !(grade === 'PREMIUM' && o.benefitCode === 'CHAMPAGNE')).map((o) => o.id),
+  );
   const defaultOf = (type: string) => config?.defaultOptions.find((o) => o.type === type) ?? null;
   const optionsOf = (type: string) =>
     (product?.options ?? [])
