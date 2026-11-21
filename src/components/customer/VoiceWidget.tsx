@@ -14,7 +14,6 @@ import { color } from '@/styles/tokens';
 type Phase = 'recording' | 'uploading' | 'review' | 'interpreting' | 'result' | 'idle';
 
 const MAX_MS = 10_000; // 최대 10초 녹음 후 자동 종료 → 지금까지의 음성을 문장으로 변환 (BE 제한 30초 이내)
-const FALLBACK_TEXT = '허니문 여행 프리미엄 등급으로 예약하고 싶어요'; // STT 502/504 시 임시 입력 (서비스 정상화 후 제거)
 const BAR_COUNT = 20;
 const flatBars = () => Array.from({ length: BAR_COUNT }, () => 4);
 
@@ -33,7 +32,7 @@ function errorText(e: unknown): string {
       case 415: return '지원하지 않는 녹음 형식입니다. 다른 브라우저로 다시 시도해 주세요.';
       case 422: return '음성을 알아듣지 못했어요. 다시 말하거나 화면에서 직접 골라 주세요.';
       case 502:
-      case 504: return '음성 서비스에 연결하지 못했습니다. 잠시 후 다시 시도하거나 화면에서 직접 골라 주세요.';
+      case 504: return '음성 서비스에 연결하지 못했습니다. 잠시 후 다시 시도해주세요.';
       default: return e.message;
     }
   }
@@ -62,6 +61,59 @@ function MicIcon({ size = 20 }: { size?: number }) {
       <path d="M5 11a7 7 0 0 0 14 0" />
       <path d="M12 18v3" />
     </svg>
+  );
+}
+
+/** 흰 원 버튼 (마이크 · 입력 중지 공통) */
+const circleBtn = {
+  width: 40,
+  height: 40,
+  border: 0,
+  borderRadius: '50%',
+  padding: 0,
+  background: '#ffffff',
+  color: '#000000',
+  cursor: 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  flexShrink: 0,
+} as const;
+
+const iconLayer = {
+  position: 'absolute',
+  inset: 0,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  transition: 'opacity 0.25s ease, transform 0.25s ease',
+} as const;
+
+const BARS_W = (BAR_COUNT / 2) * 4 + (BAR_COUNT / 2 - 1) * 4; // 막대 10개 + 간격 9개
+
+/** 원 버튼 옆 막대. 녹음이 시작되면 폭이 0 → 전체로 펼쳐지며 나타난다 (바깥쪽 끝 기준으로 잘림) */
+function BarsSlot({ show, side, values }: { show: boolean; side: 'left' | 'right'; values: number[] }) {
+  const pad = 16;
+  return (
+    <div
+      aria-hidden="true"
+      style={{
+        boxSizing: 'border-box',
+        width: show ? BARS_W + pad : 0,
+        opacity: show ? 1 : 0,
+        overflow: 'hidden',
+        display: 'flex',
+        justifyContent: side === 'left' ? 'flex-end' : 'flex-start',
+        [side === 'left' ? 'paddingRight' : 'paddingLeft']: show ? pad : 0,
+        transition: 'width 0.35s ease, opacity 0.3s ease 0.05s, padding 0.35s ease',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, height: 32, flexShrink: 0 }}>
+        {values.map((h, i) => (
+          <span key={i} style={{ width: 4, height: h, borderRadius: 2, background: '#ffffff', display: 'block', transition: 'height 0.08s linear' }} />
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -139,17 +191,15 @@ export default function VoiceWidget({
     setNote('');
     try {
       const res = await transcribe(blob);
-      setText(res.text ?? '');
-      setPhase('review');
-      if (!res.text?.trim()) setNote('음성을 알아듣지 못했어요. 다시 말하거나 화면에서 직접 골라 주세요.');
-    } catch (e) {
-      // 임시: 음성 서비스 연결 실패(502/504) 시 샘플 문장을 넣고 다음 단계(문장 확인 → 찾기)로 진행
-      if (e instanceof ApiError && (e.status === 502 || e.status === 504)) {
-        setText(FALLBACK_TEXT);
-        setNote('음성 서비스에 연결하지 못해 예시 문장을 넣었어요. 고쳐서 사용하세요.');
-        setPhase('review');
+      if (!res.text?.trim()) {
+        setNote('음성을 알아듣지 못했어요. 다시 말하거나 화면에서 직접 골라 주세요.');
+        setPhase('idle');
         return;
       }
+      setText(res.text);
+      setPhase('review');
+    } catch (e) {
+      // 실패하면 문장 칸 없이 실패 안내 문구만 보여준다
       setNote(errorText(e));
       setPhase('idle');
     }
@@ -210,29 +260,12 @@ export default function VoiceWidget({
     an.smoothingTimeConstant = 0.6;
     ctx.createMediaStreamSource(stream).connect(an);
     const data = new Uint8Array(an.frequencyBinCount);
-    const startedAt = performance.now();
-    let spoke = false;
-    let quietSince = 0;
     let frame = 0;
     const tick = () => {
+      // 종료는 '입력 중지' 버튼 또는 10초 타이머(MAX_MS)로만 한다. 여기서는 막대만 그린다.
       an.getByteFrequencyData(data);
-      let sum = 0;
       const next: number[] = [];
-      for (let i = 0; i < BAR_COUNT; i++) {
-        const v = data[i + 1] / 255;
-        sum += v;
-        next.push(4 + v * 28);
-      }
-      const now = performance.now();
-      const loud = sum / BAR_COUNT >= 0.06;
-      if (loud) {
-        spoke = true;
-        quietSince = 0;
-      } else if (!quietSince) quietSince = now;
-      if ((spoke && quietSince && now - quietSince > 1500) || (!spoke && now - startedAt > 8000)) {
-        finishRecording();
-        return;
-      }
+      for (let i = 0; i < BAR_COUNT; i++) next.push(4 + (data[i + 1] / 255) * 28);
       if (frame++ % 2 === 0) setBars(next);
       rafRef.current = requestAnimationFrame(tick);
     };
@@ -255,8 +288,8 @@ export default function VoiceWidget({
     setText('');
     setResult(null);
     setNote('');
-    if (member) void startRecording();
-    else setPhase('idle');
+    setBars(flatBars());
+    setPhase('idle'); // 팝업이 열려도 바로 녹음하지 않고, 마이크 버튼을 눌러야 시작한다
   };
 
   const closePanel = () => {
@@ -333,7 +366,8 @@ export default function VoiceWidget({
           ...result.fields.extras.map((f) => ({ label: '추가', v: fieldText(f) })),
         ].filter((r): r is { label: string; v: { text: string; ok: boolean } } => r.v != null);
 
-  const showText = phase === 'review' || phase === 'interpreting' || phase === 'result';
+  const recording = phase === 'recording';
+  const showText =phase === 'review' || phase === 'interpreting' || phase === 'result';
 
   return (
     <div
@@ -418,37 +452,34 @@ export default function VoiceWidget({
           </p>
         </div>
 
-        <div style={{ flex: '0 0 58px', height: 58, margin: '0 16px', boxSizing: 'border-box', borderTop: '1px solid rgba(255, 255, 255, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
-          {phase === 'recording' ? (
-            <button
-              type="button"
-              onClick={finishRecording}
-              aria-label="말하기 끝내기"
-              style={{ display: 'flex', alignItems: 'center', gap: 4, height: 32, background: 'none', border: 0, padding: 0, cursor: 'pointer' }}
-            >
-              {bars.map((h, i) => (
-                <span key={i} style={{ width: 4, height: h, borderRadius: 2, background: '#ffffff', display: 'block', transition: 'height 0.08s linear' }} />
-              ))}
-            </button>
-          ) : phase === 'uploading' || phase === 'interpreting' ? (
+        <div style={{ flex: '0 0 62px', height: 62, margin: '0 16px', boxSizing: 'border-box', borderTop: '2px solid rgba(255, 255, 255, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {phase === 'uploading' || phase === 'interpreting' ? (
             <span style={{ fontSize: 14, opacity: 0.7 }}>잠시만 기다려 주세요…</span>
           ) : member ? (
             <>
+              {/* 가운데 원 버튼은 제자리에 두고, 아이콘만 마이크 ↔ 붉은 네모로 교차 전환 + 막대가 좌우로 펼쳐진다 */}
+              <BarsSlot show={recording} side="left" values={bars.slice(0, BAR_COUNT / 2).reverse()} />
               <button
                 type="button"
-                onClick={() => void startRecording()}
-                aria-label="다시 말하기"
-                style={{ width: 36, height: 36, border: 0, borderRadius: '50%', padding: 0, background: '#ffffff', color: '#000000', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                onClick={() => (recording ? finishRecording() : void startRecording())}
+                aria-label={recording ? '입력 중지' : phase === 'idle' ? '말하기 시작' : '다시 말하기'}
+                style={{ ...circleBtn, position: 'relative' }}
               >
-                <MicIcon size={18} />
+                <span aria-hidden="true" style={{ ...iconLayer, opacity: recording ? 0 : 1, transform: recording ? 'scale(0.5)' : 'scale(1)' }}>
+                  <MicIcon size={20} />
+                </span>
+                <span aria-hidden="true" style={{ ...iconLayer, opacity: recording ? 1 : 0, transform: recording ? 'scale(1)' : 'scale(0.5)' }}>
+                  <span style={{ width: 14, height: 14, background: '#e5201d', borderRadius: 2, display: 'block' }} />
+                </span>
               </button>
+              <BarsSlot show={recording} side="right" values={bars.slice(BAR_COUNT / 2)} />
               {phase === 'review' && (
-                <button type="button" style={pillBtn} onClick={() => void runInterpret()}>
+                <button type="button" style={{ ...pillBtn, marginLeft: 12 }} onClick={() => void runInterpret()}>
                   이 문장으로 찾기
                 </button>
               )}
               {phase === 'result' && result && (
-                <button type="button" style={pillBtn} onClick={apply}>
+                <button type="button" style={{ ...pillBtn, marginLeft: 12 }} onClick={apply}>
                   선택 적용
                 </button>
               )}
