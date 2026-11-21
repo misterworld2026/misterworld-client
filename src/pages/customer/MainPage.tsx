@@ -117,7 +117,11 @@ export default function MainPage() {
                   onMouseLeave={() => setActive(null)}
                   style={{
                     flexGrow: on ? 2 : 1, flexShrink: 1, flexBasis: 0, minWidth: 200, height: 520, boxSizing: 'border-box', padding: 24,
-                    background: color.navyDeep, color: '#ffffff', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gap: 16,
+                    // 하단 글자 가독성을 위해 이미지 위에 아래쪽이 짙은 그라데이션을 깐다
+                    backgroundColor: color.navyDeep,
+                    backgroundImage: `linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.25) 45%, rgba(0,0,0,0) 70%), url(${t.image})`,
+                    backgroundSize: 'cover', backgroundPosition: 'center',
+                    color: '#ffffff', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gap: 16,
                     overflow: 'hidden', transition: `flex-grow 0.5s ${EASE}`,
                   }}
                 >
@@ -168,7 +172,12 @@ export default function MainPage() {
             <div
               key={r.by}
               aria-hidden="true"
-              style={{ position: 'absolute', inset: 0, background: i === 1 ? color.surfaceDark : color.navyDeep, opacity: i === idx ? 1 : 0, transition: 'opacity 0.6s ease' }}
+              style={{
+                position: 'absolute', inset: 0, opacity: i === idx ? 1 : 0, transition: 'opacity 0.6s ease',
+                backgroundColor: color.navyDeep,
+                backgroundImage: `url(${r.image})`,
+                backgroundSize: 'cover', backgroundPosition: r.position,
+              }}
             />
           ))}
           <div

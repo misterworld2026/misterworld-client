@@ -22,16 +22,6 @@ const TabBtn = styled.button<{ $on: boolean }>`
   cursor: pointer;
 `;
 
-/* 패널 하단에 놓이되, sticky bottom으로 스크롤해도 뷰포트 하단에서 항상 64px 위에 고정 */
-const Slogan = styled.div`
-  margin-top: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  position: sticky;
-  bottom: 64px;
-`;
-
 const Field = styled.div`
   display: flex;
   flex-direction: column;
@@ -153,23 +143,9 @@ export default function AuthPage() {
     <div style={{ background: '#ffffff', color: '#000000', minHeight: '100vh' }}>
       <CustomerHeader current="login" />
 
-      <main style={{ display: 'flex', flexWrap: 'wrap' }}>
+      <main style={{ background: '#ffffff' }}>
         <section
-          aria-label="브랜드 소개"
-          style={{ flex: '1 1 420px', minHeight: 320, boxSizing: 'border-box', background: color.navyDeep, color: '#ffffff', padding: '24px 40px 64px', display: 'flex', flexDirection: 'column' }}
-        >
-          <Slogan>
-            <p style={{ margin: 0, fontSize: 32, lineHeight: '40px', fontWeight: 700 }}>
-              당신을 위한 휴식,
-              <br />
-              우리가 만듭니다.
-            </p>
-            <p style={{ margin: 0, fontSize: 17, lineHeight: '26px' }}>계획도, 준비도 필요 없습니다. 설렘만 가져오세요.</p>
-          </Slogan>
-        </section>
-
-        <section
-          style={{ flex: '1 1 480px', minHeight: 880, boxSizing: 'border-box', padding: '44px clamp(24px, 6vw, 96px) 64px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 40 }}
+          style={{ boxSizing: 'border-box', padding: '64px clamp(16px, 6vw, 96px) 96px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 40 }}
         >
           <div style={{ width: '100%', maxWidth: 520, display: 'flex', flexDirection: 'column', gap: 40 }}>
             <div role="tablist" aria-label="로그인 또는 회원가입" style={{ display: 'flex', gap: 0, borderBottom: `1px solid ${color.surfaceCool}` }}>

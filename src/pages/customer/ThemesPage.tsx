@@ -26,7 +26,12 @@ export default function ThemesPage() {
               const price = themeStartPrice(products.data ?? [], t.theme);
               return (
                 <article key={t.theme} style={{ display: 'flex', flexDirection: i % 2 ? 'row-reverse' : 'row', flexWrap: 'wrap', alignItems: 'stretch', gap: 0 }}>
-                  <div aria-hidden="true" style={{ flex: '1 1 420px', minHeight: 360, background: color.navyDeep }} />
+                  <img
+                    src={t.image}
+                    alt={`${t.name} 여행 테마`}
+                    loading="lazy"
+                    style={{ flex: '1 1 420px', minWidth: 0, minHeight: 360, width: '100%', objectFit: 'cover', display: 'block', background: color.navyDeep }}
+                  />
                   <div style={{ flex: '1 1 420px', boxSizing: 'border-box', padding: 40, background: color.surfaceSoft, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 16 }}>
                     <h2 style={{ margin: 0, fontSize: 32, lineHeight: '40px', fontWeight: 700 }}>{t.name}</h2>
                     <p style={{ margin: 0, fontSize: 17, lineHeight: '26px' }}>{t.intro}</p>
