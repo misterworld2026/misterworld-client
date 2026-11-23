@@ -12,7 +12,7 @@ import { fetchAllSchedules } from '@/api/schedules';
 import { cancelMyApplication, fetchMyApplications, fetchTravelHistory, payApplication } from '@/api/booking';
 import type { ApplicationResponse } from '@/api/types';
 import { GRADE_LABEL } from '@/domain/status';
-import { deadlineOf, todayIso } from '@/domain/rules';
+import { deadlineOf, productDisplayName, todayIso } from '@/domain/rules';
 import { dateTimeKst, range, ymd } from '@/domain/format';
 import { color } from '@/styles/tokens';
 import CustomerHeader from '@/components/customer/Header';
@@ -143,7 +143,7 @@ export default function MyPage() {
                 >
                   <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', justifyContent: 'space-between', gap: '8px 16px' }}>
                     <h3 style={{ margin: 0, fontSize: 17, lineHeight: '24px', fontWeight: 700 }}>
-                      {v.p?.name ?? '여행 상품'} · {v.s ? range(v.s.departureDate, v.s.arrivalDate) : '-'}
+                      {productDisplayName(v.p?.name) || '여행 상품'} ·{v.s ? range(v.s.departureDate, v.s.arrivalDate) : '-'}
                     </h3>
                     <span style={{ fontSize: 15, lineHeight: '22px', fontWeight: 700, color: v.status.fg }}>{v.status.text}</span>
                   </div>
@@ -218,7 +218,7 @@ export default function MyPage() {
                   <tbody>
                     {trips.map((t) => (
                       <tr key={t.id}>
-                        <td style={{ padding: '14px 12px', borderBottom: `1px solid ${color.surfaceCool}` }}>{t.productName}</td>
+                        <td style={{ padding: '14px 12px', borderBottom: `1px solid ${color.surfaceCool}` }}>{productDisplayName(t.productName)}</td>
                         <td style={{ padding: '14px 12px', borderBottom: `1px solid ${color.surfaceCool}` }}>{ymd(t.departureDate)} - {ymd(t.arrivalDate).slice(5)}</td>
                         <td style={{ padding: '14px 12px', borderBottom: `1px solid ${color.surfaceCool}` }}>{GRADE_LABEL[t.tourGrade] ?? t.tourGrade}</td>
                         <td style={{ padding: '14px 12px', borderBottom: `1px solid ${color.surfaceCool}`, textAlign: 'right' }}>{t.applicantCount}명</td>

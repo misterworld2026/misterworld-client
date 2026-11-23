@@ -6,12 +6,19 @@
 export const THEMES = ['허니문', '효도', '골프', '트레킹'] as const;
 export type Theme = (typeof THEMES)[number];
 
+/** 화면 표시용 테마 풀네임. BE·URL·규칙 판정에는 짧은 이름(THEMES)을 그대로 쓴다. */
 export const THEME_DISPLAY: Record<Theme, string> = {
-  허니문: '허니문',
-  효도: '효도',
-  골프: '골프',
-  트레킹: '트레킹',
+  허니문: '허니문 낭만 투어',
+  효도: '효도 힐링 투어',
+  골프: '골프 챌린지 투어',
+  트레킹: '아웃도어 트레킹 투어',
 };
+
+/** 상품 표시 이름: 상품명이 짧은 테마명('허니문' 등)이면 풀네임으로, 직원이 따로 지은 이름이면 그대로 */
+export function productDisplayName(name: string | null | undefined): string {
+  if (!name) return '';
+  return (THEME_DISPLAY as Record<string, string>)[name.trim()] ?? name;
+}
 
 export function capacityOf(theme: string): number {
   switch (theme) {

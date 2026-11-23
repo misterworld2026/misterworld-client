@@ -7,6 +7,7 @@ import { fetchTravelHistory } from '@/api/booking';
 import { useAuth } from '@/auth/AuthProvider';
 import { GRADE_LABEL } from '@/domain/status';
 import { ymd } from '@/domain/format';
+import { productDisplayName } from '@/domain/rules';
 import { color } from '@/styles/tokens';
 
 const MAX_ROWS = 5;
@@ -95,7 +96,7 @@ export default function TravelHistoryPopup() {
             <tbody>
               {recent.map((t) => (
                 <tr key={t.id}>
-                  <td style={cell}>{t.productName}</td>
+                  <td style={cell}>{productDisplayName(t.productName)}</td>
                   <td style={{ ...cell, whiteSpace: 'nowrap' }}>{ymd(t.departureDate)} - {ymd(t.arrivalDate).slice(5)}</td>
                   <td style={cell}>{GRADE_LABEL[t.tourGrade] ?? t.tourGrade}</td>
                   <td style={{ ...cell, textAlign: 'right' }}>{wonSign(t.totalPrice)}</td>

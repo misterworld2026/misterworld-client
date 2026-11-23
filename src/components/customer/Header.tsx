@@ -122,7 +122,7 @@ export default function CustomerHeader({ current }: { current?: 'login' | 'theme
           ) : (
             <LoginLink to="/my" aria-current={current === 'my' ? 'page' : undefined}>
               <UserIcon />
-              내 예약
+              MY
             </LoginLink>
           )}
           <LogoutBtn type="button" onClick={logout}>

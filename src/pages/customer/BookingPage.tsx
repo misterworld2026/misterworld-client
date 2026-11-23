@@ -17,7 +17,7 @@ import type {
   TravelQuoteResponse, TravelScheduleResponse, VoiceSelection,
 } from '@/api/types';
 import { GRADE_LABEL, type Grade } from '@/domain/status';
-import { capacityOf, carOf, classicBlocked, deadlineOf, needOf, needTextOf, todayIso, THEMES } from '@/domain/rules';
+import { capacityOf, carOf, classicBlocked, deadlineOf, needOf, needTextOf, todayIso, THEMES, THEME_DISPLAY, productDisplayName } from '@/domain/rules';
 import { dateTimeKst, md } from '@/domain/format';
 import { color } from '@/styles/tokens';
 import CustomerHeader from '@/components/customer/Header';
@@ -526,7 +526,7 @@ export default function BookingPage() {
     ? [hotel?.name, transport?.name ?? carOf(theme), meal?.name, extraOpts.map((o) => o.name).join(', ')].filter(Boolean).join(' / ')
     : '-';
   const summary = [
-    { label: '테마', value: product?.name ?? '-' },
+    { label: '테마', value: productDisplayName(product?.name) || '-' },
     { label: '일정', value: schedule ? `${md(schedule.departureDate)} - ${md(schedule.arrivalDate)}` : '-' },
     { label: '등급', value: grade ? GRADE_LABEL[grade] : '-' },
     { label: '옵션', value: optionSummary },
@@ -551,7 +551,7 @@ export default function BookingPage() {
       : `현재 신청 인원은 ${newCount}명입니다. 출발이 확정되면 문자로 알려드립니다.`;
 
   const rule = isHM
-    ? `${product?.name ?? '허니문'}는 2인 전용이며, 한 일정에 최대 4명(2팀)까지 신청할 수 있습니다. 신청 인원이 4명(2팀) 이상이면 출발이 확정됩니다.`
+    ? `${productDisplayName(product?.name) || THEME_DISPLAY['허니문']}는 2인 전용이며, 한 일정에 최대 4명(2팀)까지 신청할 수 있습니다. 신청 인원이 4명(2팀) 이상이면 출발이 확정됩니다.`
     : '신청 인원이 3명 이상이면 출발이 확정되고 문자로 알려드립니다. 신청은 출발 7일 전까지 가능합니다.';
 
   // ---- 달력 칸 ----
@@ -604,7 +604,7 @@ export default function BookingPage() {
               <div role="group" aria-label="여행 테마" style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                 {productList.map((p) => (
                   <OptBtn key={p.id} type="button" $on={p.id === productId} aria-pressed={p.id === productId} onClick={() => pickProduct(p.id)}>
-                    {p.name}
+                    {productDisplayName(p.name)}
                   </OptBtn>
                 ))}
               </div>
@@ -666,13 +666,14 @@ export default function BookingPage() {
                           setYm(s.departureDate.slice(0, 7));
                         }}
                         style={{
-                          boxSizing: 'border-box', minHeight: 64, padding: '12px 20px',
+                          position: 'relative', boxSizing: 'border-box', minHeight: 64, padding: '12px 20px 12px 26px',
                           border: `2px solid ${on ? '#000000' : ok ? color.surfaceSoft : color.surfaceCool}`,
-                          borderLeft: `8px solid ${on ? color.brandGold : ok ? color.navyDeep : '#c4c4c4'}`,
                           borderRadius: 0, background: ok ? color.surfaceSoft : color.surfaceCool, color: ok ? '#000000' : color.consoleFaint,
                           textAlign: 'left', display: 'grid', gridTemplateColumns: 'minmax(180px, 1fr) 84px 104px 184px', alignItems: 'center', gap: '8px 16px', cursor: ok ? 'pointer' : 'not-allowed',
                         }}
                       >
+                        {/* 좌측 색 막대: 테두리 모서리 사선이 생기지 않도록 border 대신 직사각형 요소로 그림 */}
+                        <span aria-hidden="true" style={{ position: 'absolute', top: -2, bottom: -2, left: -2, width: 8, background: on ? color.brandGold : ok ? color.navyDeep : '#c4c4c4' }} />
                         <span style={{ fontSize: 17, lineHeight: '24px', fontWeight: 700, whiteSpace: 'nowrap', textDecoration: ok ? 'none' : 'line-through' }}>
                           {md(s.departureDate)} - {md(s.arrivalDate)}
                         </span>
@@ -701,7 +702,7 @@ export default function BookingPage() {
                   const dh = c?.defaultOptions.find((o) => o.type === 'HOTEL')?.name ?? '-';
                   const dm = c?.defaultOptions.find((o) => o.type === 'MEAL')?.name ?? '-';
                   const dt = c?.defaultOptions.find((o) => o.type === 'TRANSPORT')?.name ?? carOf(theme);
-                  const why = classicBlocked(theme) && g === 'CLASSIC' ? `${product.name}는 그랜드 이상만 선택할 수 있습니다` : '지금은 고를 수 없는 등급입니다';
+                  const why = classicBlocked(theme) && g === 'CLASSIC' ? `${productDisplayName(product.name)}는 그랜드 이상만 선택할 수 있습니다` : '지금은 고를 수 없는 등급입니다';
                   return (
                     <button
                       key={g}
@@ -967,8 +968,10 @@ export default function BookingPage() {
                       type="button"
                       role="radio"
                       aria-checked="true"
-                      style={{ width: '100%', boxSizing: 'border-box', minHeight: 96, padding: 24, border: '2px solid #000000', borderLeft: `8px solid ${color.brandGold}`, borderRadius: 0, background: '#ffffff', color: '#000000', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 16, cursor: 'pointer' }}
+                      style={{ position: 'relative', width: '100%', boxSizing: 'border-box', minHeight: 96, padding: '24px 24px 24px 30px', border: '2px solid #000000', borderRadius: 0, background: '#ffffff', color: '#000000', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 16, cursor: 'pointer' }}
                     >
+                      {/* 좌측 색 막대: 테두리 모서리 사선이 생기지 않도록 border 대신 직사각형 요소로 그림 */}
+                      <span aria-hidden="true" style={{ position: 'absolute', top: -2, bottom: -2, left: -2, width: 8, background: color.brandGold }} />
                       <span aria-hidden="true" style={{ flexShrink: 0, width: 20, height: 20, boxSizing: 'border-box', border: '2px solid #000000', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#000000', display: 'block' }} />
                       </span>
