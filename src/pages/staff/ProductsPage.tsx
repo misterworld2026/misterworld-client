@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import styled from 'styled-components';
 import { ApiError } from '@/api/client';
 import { fetchProducts } from '@/api/tours';
-import { cancelSchedule, deleteSchedule, fetchAllSchedules } from '@/api/schedules';
+import { cancelSchedule, completeSchedule, deleteSchedule, fetchAllSchedules, startSchedule } from '@/api/schedules';
 import { fetchAdminApplications, fetchAdminNotifications } from '@/api/reservations';
 import type { NotificationResponse, TravelProductResponse, TravelScheduleResponse } from '@/api/types';
 import { GRADE_LABEL, OPTION_TYPE_LABEL, SCHEDULE_META } from '@/domain/status';
@@ -36,7 +36,7 @@ const TabBtn = styled.button<{ $on: boolean }>`
   }
 `;
 
-type Confirm = { kind: 'cancel' | 'delete'; schedule: TravelScheduleResponse };
+type Confirm = { kind: 'cancel' | 'delete' | 'start' | 'complete'; schedule: TravelScheduleResponse };
 type SchedForm = { productId: number; productName: string; schedule: TravelScheduleResponse | null };
 
 /** 일정별 문자 알림 요약 문구 */
@@ -149,6 +149,21 @@ export default function ProductsPage() {
       setConfirm(null);
       fail(e, '일정을 삭제하지 못했습니다.');
     },
+  });
+
+  const doTransition = useMutation({
+    mutationFn: ({ scheduleId, kind }: { scheduleId: number; kind: 'start' | 'complete' }) =>
+      kind === 'start' ? startSchedule(scheduleId) : completeSchedule(scheduleId),
+    onSuccess: async (_result, variables) => {
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ['schedules'] }),
+        qc.invalidateQueries({ queryKey: ['admin-apps'] }),
+        qc.invalidateQueries({ queryKey: ['inventory'] }),
+      ]);
+      setConfirm(null);
+      ok(variables.kind === 'start' ? '여행을 시작했습니다. 물품재고는 출발 확정 시 차감되었습니다.' : '여행을 완료했습니다.');
+    },
+    onError: (e) => { setConfirm(null); fail(e, '일정 상태를 변경하지 못했습니다.'); },
   });
 
   // ---- 파생 표시값 ----
@@ -362,7 +377,7 @@ export default function ProductsPage() {
                     <th scope="col" style={{ whiteSpace: 'nowrap' }}>신청 인원 ({selected ? needTextOf(selected.theme) : '-'})</th>
                     <th scope="col" style={{ width: 150 }}>신청 마감</th>
                     <th scope="col" style={{ width: 170 }}>문자 알림</th>
-                    <th scope="col" style={{ width: 176, textAlign: 'right' }}>작업</th>
+                    <th scope="col" style={{ width: 300, textAlign: 'right' }}>작업</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -408,6 +423,8 @@ export default function ProductsPage() {
                           </td>
                           <td style={{ padding: '6px 20px 6px 12px', textAlign: 'right', whiteSpace: 'nowrap' }}>
                             <span style={{ display: 'inline-flex', gap: 8 }}>
+                              {s.status === 'CONFIRMED_SCHEDULE' && <GhostBtn type="button" onClick={() => setConfirm({ kind: 'start', schedule: s })}>여행 출발</GhostBtn>}
+                              {s.status === 'IN_PROGRESS_SCHEDULE' && <GhostBtn type="button" onClick={() => setConfirm({ kind: 'complete', schedule: s })}>여행 완료</GhostBtn>}
                               <EditIconBtn
                                 type="button"
                                 disabled={!active}
@@ -494,19 +511,25 @@ export default function ProductsPage() {
 
       {confirm && (
         <ConfirmDialog
-          title={confirm.kind === 'cancel' ? '일정 취소' : '일정 삭제'}
+          title={confirm.kind === 'cancel' ? '일정 취소' : confirm.kind === 'delete' ? '일정 삭제' : confirm.kind === 'start' ? '여행 출발' : '여행 완료'}
           body={
             confirm.kind === 'cancel'
               ? `${md(confirm.schedule.departureDate)} 출발 일정을 취소합니다. 이 일정의 유효 신청 인원 ${confirm.schedule.applicantCount}명의 신청이 함께 취소되고, 신청 고객에게 취소 안내 문자가 발송됩니다.`
-              : `${md(confirm.schedule.departureDate)} 출발 일정을 삭제합니다. 신청이 없는 일정이므로 바로 삭제됩니다.`
+              : confirm.kind === 'delete'
+                ? `${md(confirm.schedule.departureDate)} 출발 일정을 삭제합니다. 신청이 없는 일정이므로 바로 삭제됩니다.`
+                : confirm.kind === 'start'
+                  ? `${md(confirm.schedule.departureDate)} 출발 일정을 여행 진행 중으로 바꿉니다. 물품재고는 출발 확정 시 이미 차감되었습니다.`
+                  : `${md(confirm.schedule.departureDate)} 출발 일정을 여행 완료로 바꾸고 여행 이력에 반영합니다.`
           }
-          confirmText={confirm.kind === 'cancel' ? '일정 취소' : '일정 삭제'}
-          busy={doCancel.isPending || doDelete.isPending}
+          confirmText={confirm.kind === 'cancel' ? '일정 취소' : confirm.kind === 'delete' ? '일정 삭제' : confirm.kind === 'start' ? '여행 출발' : '여행 완료'}
+          busy={doCancel.isPending || doDelete.isPending || doTransition.isPending}
           onClose={() => setConfirm(null)}
           onConfirm={() =>
             confirm.kind === 'cancel'
               ? doCancel.mutate(confirm.schedule.travelScheduleId)
-              : doDelete.mutate(confirm.schedule.travelScheduleId)
+              : confirm.kind === 'delete'
+                ? doDelete.mutate(confirm.schedule.travelScheduleId)
+                : doTransition.mutate({ scheduleId: confirm.schedule.travelScheduleId, kind: confirm.kind })
           }
         />
       )}

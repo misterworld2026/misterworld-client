@@ -17,6 +17,7 @@ import { dateTimeKst, range, ymd } from '@/domain/format';
 import { color } from '@/styles/tokens';
 import CustomerHeader from '@/components/customer/Header';
 import CustomerFooter from '@/components/customer/Footer';
+import EditReservationModal from './EditReservationModal';
 
 const wonSign = (n: number | null | undefined) => (n == null ? '-' : `₩${n.toLocaleString('ko-KR')}`);
 const GREEN = '#1E7B34';
@@ -42,6 +43,7 @@ export default function MyPage() {
   const schedules = useQuery({ queryKey: ['schedules'], queryFn: fetchAllSchedules });
   const products = useQuery({ queryKey: ['products'], queryFn: fetchProducts });
   const [confirmId, setConfirmId] = useState<number | null>(null);
+  const [editing, setEditing] = useState<{ application: ApplicationResponse; productId: number } | null>(null);
   const [message, setMessage] = useState<{ text: string; ok: boolean } | null>(null);
 
   const schedById = useMemo(() => new Map((schedules.data ?? []).map((s) => [s.travelScheduleId, s])), [schedules.data]);
@@ -86,6 +88,8 @@ export default function MyPage() {
     const cancellable =
       a.status === 'PENDING' && !!s && (s.status === 'RECRUITING_SCHEDULE' || s.status === 'CLOSED_SCHEDULE');
     const unpaid = a.status !== 'CANCELLED' && a.paymentStatus !== 'PAID';
+    const editable = unpaid && !!s && !!p && today <= deadlineOf(s.departureDate)
+      && (s.status === 'RECRUITING_SCHEDULE' || s.status === 'CONFIRMED_SCHEDULE');
     const status =
       a.status === 'CONFIRMED'
         ? { text: '출발 확정', fg: GREEN }
@@ -93,7 +97,7 @@ export default function MyPage() {
           ? { text: '출발 확정 대기', fg: color.info }
           : { text: s?.status === 'CANCELLED_SCHEDULE' ? '취소 (일정 취소)' : '취소', fg: color.consoleFaint };
     const options = [a.hotelOption, a.transportOption, a.mealOption, a.extraOption].filter(Boolean).join(' / ') || '-';
-    return { s, p, cancellable, unpaid, status, options };
+    return { s, p, cancellable, unpaid, editable, status, options };
   };
 
   return (
@@ -160,8 +164,9 @@ export default function MyPage() {
                     {v.options}
                     {a.discountRate ? ` · 단골 할인 ${a.discountRate}% 적용` : ''}
                   </p>
-                  {(v.unpaid || v.cancellable) && (
+                  {(v.unpaid || v.cancellable || v.editable) && (
                     <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
+                      {v.editable && v.p && <button type="button" style={btnWhite} onClick={() => setEditing({ application: a, productId: v.p!.id })}>예약 수정</button>}
                       {v.unpaid && (
                         <button type="button" style={btnBlack} disabled={pay.isPending} onClick={() => pay.mutate(a.id)}>
                           {pay.isPending && pay.variables === a.id ? '결제 중…' : 'World Pay로 결제'}
@@ -197,6 +202,13 @@ export default function MyPage() {
               );
             })}
           </section>
+
+          {editing && prodById.get(editing.productId) && <EditReservationModal
+            application={editing.application}
+            product={prodById.get(editing.productId)!}
+            onClose={() => setEditing(null)}
+            onSaved={() => { setEditing(null); void refreshAll(); setMessage({ text: '예약의 등급과 옵션을 수정했습니다.', ok: true }); }}
+          />}
 
           <section aria-labelledby="history-h" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <h2 id="history-h" style={{ margin: 0, fontSize: 22, lineHeight: '28px', fontWeight: 700 }}>여행 이력</h2>

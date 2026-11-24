@@ -14,26 +14,17 @@ import { FieldLabel, GhostBtn, Input, Required, Select, Textarea } from '@/compo
 
 const GRADES = ['CLASSIC', 'GRAND', 'PREMIUM'] as const;
 const TYPES = ['HOTEL', 'TRANSPORT', 'MEAL', 'EXTRA'] as const;
-/** EXTRA 옵션의 혜택 종류(BE benefitCode). CHAMPAGNE은 프리미엄 기본 포함 혜택이라 프리미엄에서 선택 불가 */
+/** EXTRA 옵션의 혜택 종류(BE benefitCode). 별도 추가 상품은 허용 등급에 따라 선택한다. */
 const BENEFITS = [
   { code: 'OTHER', label: '일반 추가 옵션' },
   { code: 'CHAMPAGNE', label: '샴페인' },
   { code: 'COFFEE', label: '커피' },
 ] as const;
 const DEFAULT_BENEFIT = 'OTHER';
-const isChampagne = (r: OptionRow) => r.type === 'EXTRA' && r.benefitCode === 'CHAMPAGNE';
-
-/** 종류·혜택에 맞춰 benefitCode와 샴페인 프리미엄 제한을 정리한다 */
+/** 옵션 종류에 맞춰 benefitCode를 정리한다. */
 function normalizeRow(r: OptionRow): OptionRow {
   if (r.type !== 'EXTRA') return { ...r, benefitCode: null };
-  const benefitCode = r.benefitCode ?? DEFAULT_BENEFIT;
-  if (benefitCode !== 'CHAMPAGNE') return { ...r, benefitCode };
-  return {
-    ...r,
-    benefitCode,
-    allowedTourGrades: r.allowedTourGrades.filter((g) => g !== 'PREMIUM'),
-    defaultForGrade: r.defaultForGrade === 'PREMIUM' ? '' : r.defaultForGrade,
-  };
+  return { ...r, benefitCode: r.benefitCode ?? DEFAULT_BENEFIT };
 }
 
 interface OptionRow {
@@ -136,8 +127,6 @@ export default function ProductFormModal({
       if (!r.name.trim()) return setError('옵션명이 비어 있는 옵션이 있습니다.');
       if (!/^\d+$/.test(r.additionalPrice || '0')) return setError('옵션 추가 금액은 0 이상의 정수로 입력해 주세요.');
       if (blocked && r.grade === 'CLASSIC') return setError(`${theme} 상품에는 클래식 등급 옵션을 등록할 수 없습니다.`);
-      if (r.type === 'EXTRA' && r.benefitCode === 'CHAMPAGNE' && (r.allowedTourGrades.includes('PREMIUM') || r.defaultForGrade === 'PREMIUM'))
-        return setError('샴페인 옵션은 프리미엄 기본 포함 혜택이라 프리미엄 등급에서 선택할 수 없습니다.');
     }
     setError('');
     save.mutate();
@@ -274,7 +263,7 @@ export default function ProductFormModal({
                     <Select value={r.defaultForGrade} onChange={(e) => setRow(i, { defaultForGrade: e.target.value })}>
                       <option value="">기본 아님</option>
                       {GRADES.map((g) => (
-                        <option key={g} value={g} disabled={(blocked && g === 'CLASSIC') || (isChampagne(r) && g === 'PREMIUM')}>
+                        <option key={g} value={g} disabled={blocked && g === 'CLASSIC'}>
                           {GRADE_LABEL[g]} 기본
                         </option>
                       ))}
@@ -286,8 +275,6 @@ export default function ProductFormModal({
                       <label key={g} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, color: color.consoleBtnText }}>
                         <input
                           type="checkbox"
-                          disabled={isChampagne(r) && g === 'PREMIUM'}
-                          title={isChampagne(r) && g === 'PREMIUM' ? '프리미엄은 샴페인이 기본 포함되어 선택할 수 없습니다' : undefined}
                           checked={r.allowedTourGrades.includes(g)}
                           onChange={(e) =>
                             setRow(i, {

@@ -3,6 +3,7 @@ import { api, fetchAllPages, normalizePage } from './client';
 import type {
   ApplicationResponse,
   TravelApplicationRequest,
+  TravelApplicationChangeRequest,
   TravelApplicationResponse,
   TravelHistoryResponse,
   TravelQuoteResponse,
@@ -16,6 +17,14 @@ export function quoteReservation(body: TravelApplicationRequest): Promise<Travel
 /** 신청 저장 (requestKey 멱등, quoteToken 필수) */
 export function applyReservation(body: TravelApplicationRequest): Promise<TravelApplicationResponse> {
   return api<TravelApplicationResponse>('/api/reservations', { method: 'POST', body });
+}
+
+export function quoteReservationChange(applicationId: number, body: TravelApplicationChangeRequest): Promise<TravelQuoteResponse> {
+  return api<TravelQuoteResponse>(`/api/my/applications/${applicationId}/change/quote`, { method: 'POST', body });
+}
+
+export function changeReservation(applicationId: number, body: TravelApplicationChangeRequest): Promise<ApplicationResponse> {
+  return api<ApplicationResponse>(`/api/my/applications/${applicationId}/change`, { method: 'PUT', body });
 }
 
 /** 모의 결제(World Pay) */

@@ -10,7 +10,7 @@ export default function FloatingVoice() {
   const navigate = useNavigate();
   if (auth.role === 'STAFF') return null;
   return (
-    <div style={{ position: 'sticky', bottom: 48, height: 0, display: 'flex', justifyContent: 'flex-end', padding: '0 48px', zIndex: 10 }}>
+    <div style={{ position: 'sticky', bottom: 48, height: 0, display: 'flex', justifyContent: 'flex-end', padding: '0 clamp(16px, 4vw, 48px)', zIndex: 10 }}>
       <div style={{ transform: 'translateY(-100%)', alignSelf: 'flex-start' }}>
         <VoiceWidget context={EMPTY_SELECTION} onApply={(selection) => navigate('/booking', { state: { voice: selection } })} />
       </div>

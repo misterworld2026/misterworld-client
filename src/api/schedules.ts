@@ -25,3 +25,11 @@ export function deleteSchedule(scheduleId: number): Promise<void> {
 export function cancelSchedule(scheduleId: number) {
   return api<TravelScheduleResponse>(`/api/admin/schedules/${scheduleId}/cancel`, { method: 'PUT' });
 }
+
+export function startSchedule(scheduleId: number) {
+  return api<TravelScheduleResponse>(`/api/admin/schedules/${scheduleId}/start`, { method: 'PUT' });
+}
+
+export function completeSchedule(scheduleId: number) {
+  return api<TravelScheduleResponse>(`/api/admin/schedules/${scheduleId}/complete`, { method: 'PUT' });
+}

@@ -296,9 +296,8 @@ export default function BookingPage() {
 
   // ---- 등급·옵션 ----
   const config = product?.allowedGrades.find((c) => c.grade === grade && c.configurationReady) ?? null;
-  // 샴페인은 프리미엄 기본 포함 혜택 → 프리미엄에서는 추가 옵션으로 선택 불가
   const allowedIds = new Set(
-    (config?.allowedOptions ?? []).filter((o) => !(grade === 'PREMIUM' && o.benefitCode === 'CHAMPAGNE')).map((o) => o.id),
+    (config?.allowedOptions ?? []).map((o) => o.id),
   );
   const defaultOf = (type: string) => config?.defaultOptions.find((o) => o.type === type) ?? null;
   const optionsOf = (type: string) =>
@@ -405,7 +404,7 @@ export default function BookingPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [productList, location.state]);
 
-  // ---- 견적 → 신청 → 결제 ----
+  // ---- 견적 → 신청 저장 → 선택적으로 결제 ----
   const buildRequest = (key: string, token?: string): TravelApplicationRequest | null => {
     if (!product || !schedule || !grade || !me) return null;
     return {
@@ -446,26 +445,45 @@ export default function BookingPage() {
     }
   };
 
+  const saveApplication = async (): Promise<TravelApplicationResponse | null> => {
+    if (applied) return applied;
+    const req = quote && buildRequest(requestKey, quote.quoteToken);
+    if (!req) return null;
+    try {
+      const result = await applyReservation(req);
+      setApplied(result);
+      return result;
+    } catch (e) {
+      if (e instanceof ApiError && (e.code === 'QUOTE_CHANGED' || e.code === 'INVALID_QUOTE')) {
+        await runQuote();
+        setError('확인 시간이 지났거나 구성·금액이 바뀌었습니다. 새 금액을 확인하고 다시 시도해 주세요.');
+        return null;
+      }
+      throw e;
+    }
+  };
+
+  const goSave = async () => {
+    setBusy(true);
+    setError('');
+    try {
+      if (await saveApplication()) {
+        setStep(6);
+        window.scrollTo({ top: 0 });
+      }
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : '신청을 저장하지 못했습니다. 다시 시도해 주세요.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const goPay = async () => {
     setBusy(true);
     setError('');
     try {
-      let result = applied;
-      if (!result) {
-        const req = quote && buildRequest(requestKey, quote.quoteToken);
-        if (!req) return;
-        try {
-          result = await applyReservation(req);
-        } catch (e) {
-          if (e instanceof ApiError && (e.code === 'QUOTE_CHANGED' || e.code === 'INVALID_QUOTE')) {
-            await runQuote();
-            setError('확인 시간이 지났거나 구성·금액이 바뀌었습니다. 다시 확인한 금액으로 한 번 더 결제를 눌러 주세요.');
-            return;
-          }
-          throw e;
-        }
-        setApplied(result);
-      }
+      const result = await saveApplication();
+      if (!result) return;
       try {
         const done = await payApplication(result.application.id);
         setPaid(done);
@@ -501,7 +519,7 @@ export default function BookingPage() {
     window.scrollTo({ top: 0 });
   };
   const goPrev = () => {
-    if (step <= 1 || busy) return;
+    if (step <= 1 || busy || (step === 5 && !!applied)) return;
     if (step === 5 && !applied) setQuote(null);
     setError('');
     setStep(step - 1);
@@ -848,9 +866,6 @@ export default function BookingPage() {
                         })}
                       </div>
                     )}
-                    {grade === 'PREMIUM' && optionsOf('EXTRA').some((o) => o.benefitCode === 'CHAMPAGNE') && (
-                      <p style={{ margin: 0, fontSize: 14, lineHeight: '20px' }}>프리미엄 등급에는 샴페인이 기본으로 포함되어 있어 따로 추가하지 않습니다.</p>
-                    )}
                   </div>
                 </OptRow>
               </div>
@@ -981,7 +996,7 @@ export default function BookingPage() {
                       </span>
                     </button>
                   </div>
-                  <p style={{ margin: 0, fontSize: 15, lineHeight: '22px' }}>아래 "World Pay로 결제"를 누르면 결제가 진행됩니다.</p>
+                  <p style={{ margin: 0, fontSize: 15, lineHeight: '22px' }}>예약만 저장하고 나중에 내 예약에서 결제하거나, 지금 World Pay로 결제할 수 있습니다.</p>
                 </div>
 
                 <aside aria-label="결제 내역" style={{ flex: '1 1 340px', boxSizing: 'border-box', padding: 24, background: color.surfaceSoft, display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -1017,7 +1032,7 @@ export default function BookingPage() {
               <span aria-hidden="true" style={{ width: 64, height: 64, background: color.brandGold, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.4"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
               </span>
-              <H1 id="done-title">예약이 완료되었습니다</H1>
+              <H1 id="done-title">{paid ? '예약과 결제가 완료되었습니다' : '예약이 저장되었습니다'}</H1>
               <dl style={{ margin: 0, width: '100%', maxWidth: 560, boxSizing: 'border-box', padding: 24, background: color.surfaceSoft, display: 'flex', flexDirection: 'column', gap: 12, textAlign: 'left' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, fontSize: 15, lineHeight: '22px' }}>
                   <dt>예약 번호</dt>
@@ -1034,11 +1049,12 @@ export default function BookingPage() {
                   </div>
                 ))}
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, paddingTop: 12, borderTop: '2px solid #000000', fontSize: 17, lineHeight: '24px', fontWeight: 700 }}>
-                  <dt>결제 금액</dt>
+                  <dt>{paid ? '결제 금액' : '결제 예정 금액'}</dt>
                   <dd style={{ margin: 0 }}>{wonSign(paid?.paidAmount ?? applied.application.totalPrice)}</dd>
                 </div>
               </dl>
               <p style={{ margin: 0, maxWidth: 560, fontSize: 17, lineHeight: '26px' }}>{doneNotice}</p>
+              {!paid && <p style={{ margin: 0, maxWidth: 560, fontSize: 15, lineHeight: '24px' }}>아직 결제 전입니다. 내 예약에서 등급과 옵션을 수정하거나 World Pay로 결제할 수 있습니다.</p>}
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
                 <Link to="/" style={{ background: '#000000', color: '#ffffff', fontSize: 14, lineHeight: '20px', padding: '14px 32px' }}>홈으로</Link>
                 <Link to="/my" style={{ border: '1px solid #000000', color: '#000000', fontSize: 14, lineHeight: '20px', padding: '13px 32px' }}>내 예약 보기</Link>
@@ -1063,9 +1079,12 @@ export default function BookingPage() {
               ))}
             </dl>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button type="button" onClick={goPrev} disabled={step <= 1 || busy} style={{ minWidth: 96, height: 48, border: '1px solid #ffffff', borderRadius: 0, background: color.surfaceDark, color: '#ffffff', fontSize: 14, cursor: 'pointer', opacity: step <= 1 ? 0.4 : 1 }}>
+              <button type="button" onClick={goPrev} disabled={step <= 1 || busy || (step === 5 && !!applied)} style={{ minWidth: 96, height: 48, border: '1px solid #ffffff', borderRadius: 0, background: color.surfaceDark, color: '#ffffff', fontSize: 14, cursor: 'pointer', opacity: step <= 1 || (step === 5 && !!applied) ? 0.4 : 1 }}>
                 이전
               </button>
+              {step === 5 && <button type="button" onClick={() => void goSave()} disabled={!canNext} style={{ minWidth: 128, height: 48, border: '1px solid #ffffff', borderRadius: 0, background: color.surfaceDark, color: '#ffffff', fontSize: 14, fontWeight: 700, cursor: 'pointer', opacity: canNext ? 1 : 0.4 }}>
+                예약만 하기
+              </button>}
               <button type="button" onClick={goNext} disabled={!canNext} style={{ minWidth: 120, height: 48, border: 0, borderRadius: 0, background: '#ffffff', color: '#000000', fontSize: 14, fontWeight: 700, cursor: 'pointer', opacity: canNext ? 1 : 0.4 }}>
                 {busy ? (step === 5 ? '결제 중…' : '확인 중…') : step === 5 ? 'World Pay로 결제' : '다음'}
               </button>

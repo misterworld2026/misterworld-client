@@ -194,6 +194,12 @@ export interface TravelApplicationRequest {
   quoteToken?: string | null;
 }
 
+export interface TravelApplicationChangeRequest {
+  grade: Grade;
+  optionIds: number[];
+  quoteToken?: string | null;
+}
+
 export interface TravelPriceResponse {
   basePrice: number;
   additionalOptionPrice: number;
